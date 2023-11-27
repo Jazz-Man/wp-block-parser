@@ -11,8 +11,6 @@ use Rector\Set\ValueObject\LevelSetList;
 use Rector\Set\ValueObject\SetList;
 use Rector\Strict\Rector\Empty_\DisallowedEmptyRuleFixerRector;
 
-// use Rector\TypeDeclaration\Rector\ClassMethod\ArrayShapeFromConstantArrayReturnRector;
-
 return static function ( RectorConfig $config ): void {
     $config->sets( [
         SetList::CODE_QUALITY,
@@ -29,8 +27,8 @@ return static function ( RectorConfig $config ): void {
     $config->removeUnusedImports();
     $config->importShortClasses( false );
     $config->parallel();
-    //    $config->cacheDirectory(__DIR__.'/cache/rector');
-    $config->phpstanConfig( __DIR__.'/phpstan-rector.neon' );
+        $config->cacheDirectory(__DIR__.'/cache/rector');
+//    $config->phpstanConfig( __DIR__.'/phpstan-rector.neon' );
 
     $config->paths( [
         __DIR__.'/src',
@@ -39,7 +37,7 @@ return static function ( RectorConfig $config ): void {
 
     $config->skip( [
         __DIR__.'/vendor',
-        __DIR__.'/cache',
+//        __DIR__.'/cache',
         CallableThisArrayToAnonymousFunctionRector::class,
         //        ClassConstantToSelfClassRector::class,
         RemoveExtraParametersRector::class,

@@ -1,2 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<files psalm-version="5.15.0@5c774aca4746caf3d239d9c8cadb9f882ca29352"/>
+<files psalm-version="5.15.0@5c774aca4746caf3d239d9c8cadb9f882ca29352">
+  <file src="src/Parser.php">
+    <MixedReturnTypeCoercion>
+      <code><![CDATA[['block-opener', $name, $attrs, $started_at, $length]]]></code>
+      <code><![CDATA[['void-block', $name, $attrs, $started_at, $length]]]></code>
+      <code><![CDATA[array{
+     *     0:string,
+     *     1:string|null,
+     *     2:array<string,mixed>|null,
+     *     3:int|null,
+     *     4:int|null
+     * }]]></code>
+    </MixedReturnTypeCoercion>
+  </file>
+  <file src="wp-block-parser.php">
+    <UnusedClosureParam>
+      <code>$class</code>
+    </UnusedClosureParam>
+  </file>
+</files>

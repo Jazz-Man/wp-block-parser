@@ -1,4 +1,4 @@
 includes:
 #    - phar://vendor/phpstan/phpstan.phar/conf/bleedingEdge.neon
-    - phar://vendor/phpstan/phpstan/phpstan.phar/conf/bleedingEdge.neon
+    - phar://phpstan.phar/conf/bleedingEdge.neon
     - phpstan.neon.dist

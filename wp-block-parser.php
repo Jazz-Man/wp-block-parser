@@ -12,6 +12,6 @@
  * Update URI:          https://github.com/Jazz-Man/wp-block-parser.
  */
 
-use JazzMan\WpBlockParser\BlockParser;
+use JazzMan\WpBlockParser\Parser;
 
-add_filter( 'block_parser_class', static fn ( string $class ) => BlockParser::class );
+add_filter( 'block_parser_class', static fn ( string $class ): string => Parser::class );

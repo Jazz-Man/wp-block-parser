@@ -38,24 +38,7 @@
   </rule>
 
   <rule ref="rulesets/controversial.xml/Superglobals"/>
-  <rule ref="rulesets/controversial.xml/CamelCaseClassName"/>
-  <rule ref="rulesets/controversial.xml/CamelCaseParameterName">
-    <properties>
-      <property name="allow-underscore" value="true"/>
-    </properties>
-  </rule>
-  <rule ref="rulesets/controversial.xml/CamelCaseMethodName">
-    <properties>
-      <property name="allow-underscore" value="true"/>
-      <property name="allow-underscore-test" value="true"/>
-    </properties>
-  </rule>
-  <rule ref="rulesets/controversial.xml/CamelCasePropertyName">
-    <properties>
-      <property name="allow-underscore" value="true"/>
-      <property name="allow-underscore-test" value="true"/>
-    </properties>
-  </rule>
+
 
   <rule ref="rulesets/naming.xml/LongClassName"/>
   <rule ref="rulesets/naming.xml/ShortClassName"/>

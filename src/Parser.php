@@ -2,52 +2,49 @@
 
 namespace JazzMan\WpBlockParser;
 
-use JetBrains\PhpStorm\Pure;
+use Exception;
+use JetBrains\PhpStorm\ArrayShape;
 
-class BlockParser {
+final class Parser {
 
     /**
      * Input document being parsed.
      *
      * @example "Pre-text\n<!-- wp:paragraph -->This is inside a block!<!-- /wp:paragraph -->"
-     *
-     * @since 5.0.0
      */
-    public string $document;
+    private string $document = '';
 
     /**
      * Tracks parsing progress through document.
-     *
-     * @since 5.0.0
      */
-    public int $offset;
+    private int $offset = 0;
 
     /**
      * List of parsed blocks.
      *
-     * @since 5.0.0
-     *
-     * @var BlockParserBlock[]
+     * @var array<array{
+     *     attrs: array<string, mixed>|null,
+     *     blockName: null|string,
+     *     innerBlocks: array<array-key, mixed>,
+     *     innerContent: array<array-key, string|null>|null,
+     *     innerHTML: string
+     * }>
      */
-    public array $output;
+    private array $output = [];
 
     /**
      * Stack of partially-parsed structures in memory during parse.
      *
-     * @since 5.0.0
-     *
-     * @var BlockParserFrame[]
+     * @var ParserFrame[]
      */
-    public array $stack;
+    private array $stack = [];
 
     /**
      * Empty associative array, here due to PHP quirks.
      *
-     * @since 4.4.0
-     *
-     * @var array empty associative array
+     * @var array<string,mixed> empty associative array
      */
-    public array $empty_attrs;
+    private array $empty_attrs = [];
 
     /**
      * Parses a document and returns a list of block structures.
@@ -56,18 +53,17 @@ class BlockParser {
      * parse. In contrast to the specification parser this does not
      * return an error on invalid inputs.
      *
-     * @since 5.0.0
-     *
      * @param string $document input document being parsed
      *
-     * @return array[]
+     * @return Block[]
      */
     public function parse( string $document ): array {
         $this->document = $document;
         $this->offset = 0;
         $this->output = [];
         $this->stack = [];
-        $this->empty_attrs = json_decode( '{}', true );
+
+        $this->empty_attrs = [];
 
         while ( $this->proceed() ) {
             continue;
@@ -85,15 +81,20 @@ class BlockParser {
      * with that token before descending deeper into a
      * nested block tree or continuing along the document
      * or breaking out of a level of nesting.
-     *
-     * @internal
-     *
-     * @since 5.0.0
      */
-    public function proceed(): bool {
+    private function proceed(): bool {
         $next_token = $this->next_token();
-        [ $token_type, $block_name, $attrs, $start_offset, $token_length ] = $next_token;
+
+        [$token_type, $block_name, $attrs, $start_offset, $token_length] = $next_token;
         $stack_depth = \count( $this->stack );
+
+        if ( null === $start_offset ) {
+            $start_offset = 0;
+        }
+
+        if ( null === $token_length ) {
+            $token_length = 0;
+        }
 
         // we may have some HTML soup before the next block.
         $leading_html_start = $start_offset > $this->offset ? $this->offset : null;
@@ -128,7 +129,7 @@ class BlockParser {
                  * have to assume that multiple closers are missing
                  * and so we'll collapse the whole stack piecewise
                  */
-                while ( 0 < \count( $this->stack ) ) {
+                while ( [] !== $this->stack ) {
                     $this->add_block_from_stack();
                 }
 
@@ -141,7 +142,7 @@ class BlockParser {
                  */
                 if ( 0 === $stack_depth ) {
                     if ( isset( $leading_html_start ) ) {
-                        $this->output[] = (array) $this->freeform(
+                        $this->output[] = $this->freeform(
                             substr(
                                 $this->document,
                                 $leading_html_start,
@@ -150,7 +151,7 @@ class BlockParser {
                         );
                     }
 
-                    $this->output[] = (array) new BlockParserBlock( $block_name, $attrs, [], '', [] );
+                    $this->output[] = (new Block( $block_name, $attrs, [], '', [] ))->to_array();
                     $this->offset = $start_offset + $token_length;
 
                     return true;
@@ -158,7 +159,7 @@ class BlockParser {
 
                 // otherwise we found an inner block.
                 $this->add_inner_block(
-                    new BlockParserBlock( $block_name, $attrs, [], '', [] ),
+                    new Block( $block_name, $attrs, [], '', [] ),
                     $start_offset,
                     $token_length
                 );
@@ -168,8 +169,8 @@ class BlockParser {
 
             case 'block-opener':
                 // track all newly-opened blocks on the stack.
-                $this->stack[] = new BlockParserFrame(
-                    new BlockParserBlock( $block_name, $attrs, [], '', [] ),
+                $this->stack[] = new ParserFrame(
+                    new Block( $block_name, $attrs, [], '', [] ),
                     $start_offset,
                     $token_length,
                     $start_offset + $token_length,
@@ -204,14 +205,18 @@ class BlockParser {
                     return true;
                 }
 
-                /*
-                 * otherwise we're nested and we have to close out the current
-                 * block and add it as a new innerBlock to the parent
+                /**
+                 * otherwise we're nested, and we have to close out the current
+                 * block and add it as a new innerBlock to the parent.
                  */
-                $stack_top = array_pop( $this->stack );
+                $stack_top = $this->get_stack_top();
+
                 $html = substr( $this->document, $stack_top->prev_offset, $start_offset - $stack_top->prev_offset );
+
                 $stack_top->block->innerHTML .= $html;
+
                 $stack_top->block->innerContent[] = $html;
+
                 $stack_top->prev_offset = $start_offset + $token_length;
 
                 $this->add_inner_block(
@@ -220,6 +225,7 @@ class BlockParser {
                     $stack_top->token_length,
                     $start_offset + $token_length
                 );
+
                 $this->offset = $start_offset + $token_length;
 
                 return true;
@@ -238,48 +244,43 @@ class BlockParser {
      *
      * Returns the type of the find: kind of find, block information, attributes
      *
-     * @internal
-     *
-     * @since 5.0.0
-     * @since 4.6.1 fixed a bug in attribute parsing which caused catastrophic backtracking on invalid block comments
+     * @return array{
+     *     0:string,
+     *     1:string|null,
+     *     2:array<string,mixed>|null,
+     *     3:int|null,
+     *     4:int|null
+     * }
      */
-    public function next_token(): array {
-        $matches = null;
-
-        /*
-         * aye the magic
-         * we're using a single RegExp to tokenize the block comment delimiters
-         * we're also using a trick here because the only difference between a
-         * block opener and a block closer is the leading `/` before `wp:` (and
-         * a closer has no attributes). we can trap them both and process the
-         * match back in PHP to see which one it was.
-         */
-        $has_match = preg_match(
-            '/<!--\s+(?P<closer>\/)?wp:(?P<namespace>[a-z][a-z0-9_-]*\/)?(?P<name>[a-z][a-z0-9_-]*)\s+(?P<attrs>{(?:(?:[^}]+|}+(?=})|(?!}\s+\/?-->).)*+)?}\s+)?(?P<void>\/)?-->/s',
-            $this->document,
-            $matches,
-            PREG_OFFSET_CAPTURE,
-            $this->offset
-        );
-
-        // if we get here we probably have catastrophic backtracking or out-of-memory in the PCRE.
-        if ( false === $has_match ) {
-            return [ 'no-more-tokens', null, null, null, null ];
-        }
+    #[ArrayShape( [
+        0 => 'string',
+        1 => 'string|null',
+        2 => 'array<string,mixed>|null',
+        3 => 'int|null',
+        4 => 'int|null',
+    ] )]
+    private function next_token(): array {
+        $matches = $this->get_matches();
 
         // we have no more tokens.
-        if ( 0 === $has_match ) {
-            return [ 'no-more-tokens', null, null, null, null ];
+        if ( empty( $matches ) ) {
+            return ['no-more-tokens', null, null, null, null];
         }
 
-        [ $match, $started_at ] = $matches[0];
+        [$match, $started_at] = $matches[0];
 
         $length = \strlen( $match );
+
         $is_closer = isset( $matches['closer'] ) && -1 !== $matches['closer'][1];
+
         $is_void = isset( $matches['void'] ) && -1 !== $matches['void'][1];
+
         $namespace = $matches['namespace'];
+
         $namespace = ( isset( $namespace ) && -1 !== $namespace[1] ) ? $namespace[0] : 'core/';
+
         $name = $namespace.$matches['name'][0];
+
         $has_attrs = isset( $matches['attrs'] ) && -1 !== $matches['attrs'][1];
 
         /*
@@ -289,11 +290,11 @@ class BlockParser {
 
         try {
 
-            if ( $has_attrs ) {
+            if ( $has_attrs && isset( $matches['attrs'][0] ) ) {
 
-                $attr_json_string = self::unicode_to_utf8( $matches['attrs'][0] );
+                $attr_json_string = $this->unicode_to_utf8( $matches['attrs'][0] );
 
-                $attrs = app_json_decode( $attr_json_string, true );
+                $attrs = (array) app_json_decode( $attr_json_string, true );
 
             } else {
                 $attrs = $this->empty_attrs;
@@ -313,30 +314,67 @@ class BlockParser {
         }
 
         if ( $is_void ) {
-            return [ 'void-block', $name, $attrs, $started_at, $length ];
+            return ['void-block', $name, $attrs, $started_at, $length];
         }
 
         if ( $is_closer ) {
-            return [ 'block-closer', $name, null, $started_at, $length ];
+            return ['block-closer', $name, null, $started_at, $length];
         }
 
-        return [ 'block-opener', $name, $attrs, $started_at, $length ];
+        return ['block-opener', $name, $attrs, $started_at, $length];
     }
 
     /**
-     * Returns a new block object for freeform HTML.
-     *
-     * @internal
-     *
-     * @since 3.9.0
-     *
-     * @param string $innerHTML HTML content of block
-     *
-     * @return BlockParserBlock freeform block object
+     * @return array{
+     *     0: array{0: string,1:int},
+     *     closer: array{0: string,1:int}|null,
+     *     1: array{0: string,1:int}|null,
+     *     namespace: array{0: string,1:int}|null,
+     *     2: array{0: string,1:int}|null,
+     *     name: array{0: string,1:int},
+     *     3: array{0: string,1:int}|null,
+     *     attrs: array{0: string,1:int}|null,
+     *     4: array{0: string,1:int}|null,
+     *     void: array{0: string,1:int}|null,
+     * }|false
      */
-    #[Pure]
-    public function freeform( string $innerHTML ): BlockParserBlock {
-        return new BlockParserBlock( null, $this->empty_attrs, [], $innerHTML, [ $innerHTML ] );
+    #[ArrayShape( [
+        0 => 'array{0: string,1:int}',
+        'closer' => 'array{0: string, 1:int}|null',
+        1 => 'array{0: string,1:int}|null',
+        'namespace' => 'array{0: string,1:int}|null',
+        2 => 'array{0: string,1:int}|null',
+        'name' => 'array{0: string,1:int}',
+        3 => 'array{0: string,1:int}|null',
+        'attrs' => 'array{0: string,1:int}|null',
+        'void' => 'array{0: string,1:int}|null',
+        4 => 'array{0: string,1:int}|null',
+    ] )]
+    private function get_matches(): array|false {
+        $matches = null;
+
+        /*
+         * aye the magic
+         * we're using a single RegExp to tokenize the block comment delimiters
+         * we're also using a trick here because the only difference between a
+         * block opener and a block closer is the leading `/` before `wp:` (and
+         * a closer has no attributes). we can trap them both and process the
+         * match back in PHP to see which one it was.
+         */
+
+        preg_match(
+            '/<!--\s+(?P<closer>\/)?wp:(?P<namespace>[a-z][a-z0-9_-]*\/)?(?P<name>[a-z][a-z0-9_-]*)\s+(?P<attrs>{(?:(?:[^}]+|}+(?=})|(?!}\s+\/?-->).)*+)?}\s+)?(?P<void>\/)?-->/s',
+            $this->document,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+            $this->offset
+        );
+
+        return empty( $matches ) ? false : $matches;
+    }
+
+    private function unicode_to_utf8( string $string ): string {
+        return preg_replace_callback( '/u([0-9a-fA-F]{4})/', static fn ( array $match ): string => (string) mb_convert_encoding( pack( 'H*', $match[1] ), 'UTF-8', 'UCS-2BE' ), $string );
     }
 
     /**
@@ -344,59 +382,44 @@ class BlockParser {
      * to the output list as a freeform block.
      *
      * @param int|null $length how many bytes of document text to output
-     *
-     * @since 5.0.0
-     *
-     * @internal
      */
-    public function add_freeform( ?int $length = null ): void {
+    private function add_freeform( ?int $length = null ): void {
         $length = $length ?: \strlen( $this->document ) - $this->offset;
 
         if ( 0 === $length ) {
             return;
         }
 
-        $this->output[] = (array) $this->freeform( substr( $this->document, $this->offset, $length ) );
+        $this->output[] = $this->freeform( substr( $this->document, $this->offset, $length ) );
     }
 
     /**
-     * Given a block structure from memory pushes
-     * a new block to the output list.
+     * Returns a new block object for freeform HTML.
      *
-     * @internal
+     * @param string $innerHTML HTML content of block
      *
-     * @since 5.0.0
-     *
-     * @param BlockParserBlock $block        the block to add to the output
-     * @param int              $token_start  byte offset into the document where the first token for the block starts
-     * @param int              $token_length byte length of entire block from start of opening token to end of closing token
-     * @param int|null         $last_offset  last byte offset into document if continuing form earlier output
+     * @return array{
+     *     attrs: array<string, mixed>|null,
+     *     blockName: null|string,
+     *     innerBlocks: array<array-key, mixed>,
+     *     innerContent: array<array-key, string|null>|null,
+     *     innerHTML: string
+     * }
      */
-    public function add_inner_block( BlockParserBlock $block, int $token_start, int $token_length, ?int $last_offset = null ): void {
-        $parent = $this->stack[ \count( $this->stack ) - 1 ];
-        $parent->block->innerBlocks[] = (array) $block;
-        $html = substr( $this->document, $parent->prev_offset, $token_start - $parent->prev_offset );
+    private function freeform( string $innerHTML ): array {
 
-        if ( ! empty( $html ) ) {
-            $parent->block->innerHTML .= $html;
-            $parent->block->innerContent[] = $html;
-        }
+        $block = new Block( null, $this->empty_attrs, [], $innerHTML, [$innerHTML] );
 
-        $parent->block->innerContent[] = null;
-        $parent->prev_offset = $last_offset ?: $token_start + $token_length;
+        return $block->to_array();
     }
 
     /**
      * Pushes the top block from the parsing stack to the output list.
      *
-     * @internal
-     *
-     * @since 5.0.0
-     *
      * @param int|null $end_offset byte offset into document for where we should stop sending text output as HTML
      */
-    public function add_block_from_stack( ?int $end_offset = null ): void {
-        $stack_top = array_pop( $this->stack );
+    private function add_block_from_stack( ?int $end_offset = null ): void {
+        $stack_top = $this->get_stack_top();
         $prev_offset = $stack_top->prev_offset;
 
         $html = isset( $end_offset )
@@ -409,7 +432,7 @@ class BlockParser {
         }
 
         if ( isset( $stack_top->leading_html_start ) ) {
-            $this->output[] = (array) $this->freeform(
+            $this->output[] = $this->freeform(
                 substr(
                     $this->document,
                     $stack_top->leading_html_start,
@@ -418,10 +441,34 @@ class BlockParser {
             );
         }
 
-        $this->output[] = (array) $stack_top->block;
+        $this->output[] = $stack_top->block->to_array();
     }
 
-    private static function unicode_to_utf8( string $string ): string {
-        return preg_replace_callback( '/u([0-9a-fA-F]{4})/', static fn ( array $match ) => mb_convert_encoding( pack( 'H*', $match[1] ), 'UTF-8', 'UCS-2BE' ), $string );
+    private function get_stack_top(): ParserFrame {
+
+        return array_pop( $this->stack );
+    }
+
+    /**
+     * Given a block structure from memory pushes
+     * a new block to the output list.
+     *
+     * @param Block    $block        the block to add to the output
+     * @param int      $token_start  byte offset into the document where the first token for the block starts
+     * @param int      $token_length byte length of entire block from start of opening token to end of closing token
+     * @param int|null $last_offset  last byte offset into document if continuing form earlier output
+     */
+    private function add_inner_block( Block $block, int $token_start, int $token_length, ?int $last_offset = null ): void {
+        $parent = $this->stack[\count( $this->stack ) - 1];
+        $parent->block->innerBlocks[] = $block->to_array();
+        $html = substr( $this->document, $parent->prev_offset, $token_start - $parent->prev_offset );
+
+        if ( ! empty( $html ) ) {
+            $parent->block->innerHTML .= $html;
+            $parent->block->innerContent[] = $html;
+        }
+
+        $parent->block->innerContent[] = null;
+        $parent->prev_offset = $last_offset ?: $token_start + $token_length;
     }
 }

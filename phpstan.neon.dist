@@ -1,5 +1,5 @@
 includes:
-#    - %currentWorkingDirectory%/phpstan-baseline.neon
+    - %currentWorkingDirectory%/phpstan-baseline.neon
 
 parameters:
 	level: max
