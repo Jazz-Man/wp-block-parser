@@ -27,8 +27,7 @@ return static function ( RectorConfig $config ): void {
     $config->removeUnusedImports();
     $config->importShortClasses( false );
     $config->parallel();
-        $config->cacheDirectory(__DIR__.'/cache/rector');
-//    $config->phpstanConfig( __DIR__.'/phpstan-rector.neon' );
+    $config->phpstanConfig( __DIR__.'/phpstan-rector.neon' );
 
     $config->paths( [
         __DIR__.'/src',
