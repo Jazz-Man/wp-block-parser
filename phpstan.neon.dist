@@ -1,0 +1,16 @@
+includes:
+#    - %currentWorkingDirectory%/phpstan-baseline.neon
+
+parameters:
+	level: max
+	inferPrivatePropertyTypeFromConstructor: true
+	treatPhpDocTypesAsCertain: true
+	fileExtensions:
+	    - php
+	excludePaths:
+	    - cache
+	    - .php-cs-fixer.php
+	    - rector.php
+	paths:
+	    - src
+	    - wp-block-parser.php
