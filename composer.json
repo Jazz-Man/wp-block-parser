@@ -1,0 +1,15 @@
+{
+    "name": "jazzman/wp-block-parser",
+    "autoload": {
+        "psr-4": {
+            "JazzMan\\WpBlockParser\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Vasyl Sokolyk",
+            "email": "vsokolyk@gmail.com"
+        }
+    ],
+    "require": {}
+}
