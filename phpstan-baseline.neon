@@ -1,0 +1,6 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Method JazzMan\\\\WpBlockParser\\\\Parser\\:\\:get_stack_top\\(\\) should return JazzMan\\\\WpBlockParser\\\\ParserFrame but returns JazzMan\\\\WpBlockParser\\\\ParserFrame\\|null\\.$#"
+			count: 1
+			path: src/Parser.php

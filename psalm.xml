@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<psalm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="https://getpsalm.org/schema/config"
+       xsi:schemaLocation="https://getpsalm.org/schema/config"
+       serializer="igbinary"
+       errorLevel="1"
+       phpVersion="8.2"
+       autoloader="vendor/szepeviktor/phpstan-wordpress/bootstrap.php"
+       findUnusedBaselineEntry="true"
+       findUnusedCode="false"
+       errorBaseline="psalm-baseline.xml"
+>
+    <projectFiles>
+        <directory name="src"/>
+        <file name="wp-block-parser.php"/>
+        <ignoreFiles>
+            <directory name="vendor"/>
+            <file name="rector.php"/>
+            <file name=".php-cs-fixer.php"/>
+        </ignoreFiles>
+    </projectFiles>
+
+    <issueHandlers>
+        <TooManyArguments>
+            <errorLevel type="suppress">
+                <referencedFunction name="apply_filters"/>
+            </errorLevel>
+        </TooManyArguments>
+    </issueHandlers>
+
+    <stubs>
+        <file name="vendor/php-stubs/wordpress-stubs/wordpress-stubs.php" preloadClasses="true"/>
+    </stubs>
+</psalm>

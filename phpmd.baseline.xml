@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<phpmd-baseline>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Parser.php" method="proceed"/>
+  <violation rule="PHPMD\Rule\CyclomaticComplexity" file="src/Parser.php" method="next_token"/>
+  <violation rule="PHPMD\Rule\Design\NpathComplexity" file="src/Parser.php" method="next_token"/>
+  <violation rule="PHPMD\Rule\CleanCode\ElseExpression" file="src/Parser.php"/>
+</phpmd-baseline>
