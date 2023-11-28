@@ -36,13 +36,11 @@ return static function ( RectorConfig $config ): void {
 
     $config->skip( [
         __DIR__.'/vendor',
-//        __DIR__.'/cache',
-        CallableThisArrayToAnonymousFunctionRector::class,
+//        CallableThisArrayToAnonymousFunctionRector::class,
         //        ClassConstantToSelfClassRector::class,
         RemoveExtraParametersRector::class,
         EncapsedStringsToSprintfRector::class,
         DisallowedEmptyRuleFixerRector::class,
-        SimplifyEmptyCheckOnEmptyArrayRector::class,
-        //	    ArrayShapeFromConstantArrayReturnRector::class,
+//        SimplifyEmptyCheckOnEmptyArrayRector::class
     ] );
 };

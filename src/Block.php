@@ -11,10 +11,10 @@ final class Block {
          *
          * Will populate object properties from the provided arguments.
          *
-         * @param string|null                   $blockName    name of block
-         * @param array<string, mixed>|null     $attrs        optional set of attributes from block comment delimiters
-         * @param array<array-key, mixed>       $innerBlocks  list of inner blocks (of this same class)
-         * @param string                        $innerHTML    resultant HTML from inside block comment delimiters after removing inner blocks
+         * @param string|null                        $blockName    name of block
+         * @param array<array-key, mixed>|null       $attrs        optional set of attributes from block comment delimiters
+         * @param array<array-key, mixed>            $innerBlocks  list of inner blocks (of this same class)
+         * @param string                             $innerHTML    resultant HTML from inside block comment delimiters after removing inner blocks
          * @param array<array-key, string|null>|null $innerContent list of string fragments and null markers where inner blocks were found
          */
     public function __construct(
@@ -27,7 +27,7 @@ final class Block {
 
     /**
      * @return array{
-     *     attrs: array<string, mixed>|null,
+     *     attrs: array<array-key, mixed>|null,
      *     blockName: null|string,
      *     innerBlocks: array<array-key, mixed>,
      *     innerContent: array<array-key, string|null>|null,
@@ -36,7 +36,7 @@ final class Block {
      */
     #[ArrayShape( [
         'blockName' => 'null|string',
-        'attrs' => 'array<string, mixed>|null',
+        'attrs' => 'array<array-key, mixed>|null',
         'innerBlocks' => 'array<array-key, mixed>',
         'innerHTML' => 'string',
         'innerContent' => 'array<array-key, string|null>|null',

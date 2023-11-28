@@ -1,26 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Method JazzMan\\\\WpBlockParser\\\\Parser\\:\\:get_matches\\(\\) should return array\\{0\\: array\\{string, int\\}, closer\\: array\\{string, int\\}\\|null, 1\\: array\\{string, int\\}\\|null, namespace\\: array\\{string, int\\}\\|null, 2\\: array\\{string, int\\}\\|null, name\\: array\\{string, int\\}, 3\\: array\\{string, int\\}\\|null, attrs\\: array\\{string, int\\}\\|null, \\.\\.\\.\\}\\|false but returns non\\-empty\\-array\\<array\\{string, int\\<\\-1, max\\>\\}\\>\\|false\\.$#"
-			count: 1
-			path: src/Parser.php
-
-		-
 			message: "#^Method JazzMan\\\\WpBlockParser\\\\Parser\\:\\:get_stack_top\\(\\) should return JazzMan\\\\WpBlockParser\\\\ParserFrame but returns JazzMan\\\\WpBlockParser\\\\ParserFrame\\|null\\.$#"
-			count: 1
-			path: src/Parser.php
-
-		-
-			message: "#^Method JazzMan\\\\WpBlockParser\\\\Parser\\:\\:next_token\\(\\) should return array\\{string, string\\|null, array\\<string, mixed\\>\\|null, int\\|null, int\\|null\\} but returns array\\{'block\\-opener', string, array, int, int\\<0, max\\>\\}\\.$#"
-			count: 1
-			path: src/Parser.php
-
-		-
-			message: "#^Method JazzMan\\\\WpBlockParser\\\\Parser\\:\\:next_token\\(\\) should return array\\{string, string\\|null, array\\<string, mixed\\>\\|null, int\\|null, int\\|null\\} but returns array\\{'void\\-block', string, array, int, int\\<0, max\\>\\}\\.$#"
-			count: 1
-			path: src/Parser.php
-
-		-
-			message: "#^Method JazzMan\\\\WpBlockParser\\\\Parser\\:\\:unicode_to_utf8\\(\\) should return string but returns string\\|null\\.$#"
 			count: 1
 			path: src/Parser.php

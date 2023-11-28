@@ -2,7 +2,6 @@
 
 namespace JazzMan\WpBlockParser;
 
-use Exception;
 use JetBrains\PhpStorm\ArrayShape;
 
 final class Parser {
@@ -23,7 +22,7 @@ final class Parser {
      * List of parsed blocks.
      *
      * @var array<array{
-     *     attrs: array<string, mixed>|null,
+     *     attrs: array<array-key, mixed>|null,
      *     blockName: null|string,
      *     innerBlocks: array<array-key, mixed>,
      *     innerContent: array<array-key, string|null>|null,
@@ -245,17 +244,17 @@ final class Parser {
      * Returns the type of the find: kind of find, block information, attributes
      *
      * @return array{
-     *     0:string,
-     *     1:string|null,
-     *     2:array<string,mixed>|null,
-     *     3:int|null,
-     *     4:int|null
+     *     'block-closer'|'block-opener'|'no-more-tokens'|'void-block',
+     *     string|null,
+     *     array<array-key, mixed>|null,
+     *     int|null,
+     *     int<0, max>|null
      * }
      */
     #[ArrayShape( [
         0 => 'string',
         1 => 'string|null',
-        2 => 'array<string,mixed>|null',
+        2 => 'array<array-key, mixed>|null',
         3 => 'int|null',
         4 => 'int|null',
     ] )]
@@ -267,91 +266,28 @@ final class Parser {
             return ['no-more-tokens', null, null, null, null];
         }
 
-        [$match, $started_at] = $matches[0];
-
-        $length = \strlen( $match );
-
-        $is_closer = isset( $matches['closer'] ) && -1 !== $matches['closer'][1];
-
-        $is_void = isset( $matches['void'] ) && -1 !== $matches['void'][1];
-
-        $namespace = $matches['namespace'];
-
-        $namespace = ( isset( $namespace ) && -1 !== $namespace[1] ) ? $namespace[0] : 'core/';
-
-        $name = $namespace.$matches['name'][0];
-
-        $has_attrs = isset( $matches['attrs'] ) && -1 !== $matches['attrs'][1];
-
-        /*
-         * Fun fact! It's not trivial in PHP to create "an empty associative array" since all arrays
-         * are associative arrays. If we use `array()` we get a JSON `[]`
-         */
-
-        try {
-
-            if ( $has_attrs && isset( $matches['attrs'][0] ) ) {
-
-                $attr_json_string = $this->unicode_to_utf8( $matches['attrs'][0] );
-
-                $attrs = (array) app_json_decode( $attr_json_string, true );
-
-            } else {
-                $attrs = $this->empty_attrs;
-            }
-
-        } catch ( Exception $exception ) {
-            app_error_log( $exception, 'parse_block_attr' );
-            $attrs = $this->empty_attrs;
-        }
+        $length = \strlen( $matches->get_match() );
 
         /*
          * This state isn't allowed
          * This is an error
          */
-        if ( $is_closer && ( $is_void || $has_attrs ) ) {
+        if ( $matches->is_closer() && ( $matches->is_void() || $matches->has_attrs() ) ) {
             // we can ignore them since they don't hurt anything.
         }
 
-        if ( $is_void ) {
-            return ['void-block', $name, $attrs, $started_at, $length];
+        if ( $matches->is_void() ) {
+            return ['void-block', $matches->get_name(), $matches->get_attrs(), $matches->get_started_at(), $length];
         }
 
-        if ( $is_closer ) {
-            return ['block-closer', $name, null, $started_at, $length];
+        if ( $matches->is_closer() ) {
+            return ['block-closer', $matches->get_name(), null, $matches->get_started_at(), $length];
         }
 
-        return ['block-opener', $name, $attrs, $started_at, $length];
+        return ['block-opener', $matches->get_name(), $matches->get_attrs(), $matches->get_started_at(), $length];
     }
 
-    /**
-     * @return array{
-     *     0: array{0: string,1:int},
-     *     closer: array{0: string,1:int}|null,
-     *     1: array{0: string,1:int}|null,
-     *     namespace: array{0: string,1:int}|null,
-     *     2: array{0: string,1:int}|null,
-     *     name: array{0: string,1:int},
-     *     3: array{0: string,1:int}|null,
-     *     attrs: array{0: string,1:int}|null,
-     *     4: array{0: string,1:int}|null,
-     *     void: array{0: string,1:int}|null,
-     * }|false
-     */
-    #[ArrayShape( [
-        0 => 'array{0: string,1:int}',
-        'closer' => 'array{0: string, 1:int}|null',
-        1 => 'array{0: string,1:int}|null',
-        'namespace' => 'array{0: string,1:int}|null',
-        2 => 'array{0: string,1:int}|null',
-        'name' => 'array{0: string,1:int}',
-        3 => 'array{0: string,1:int}|null',
-        'attrs' => 'array{0: string,1:int}|null',
-        'void' => 'array{0: string,1:int}|null',
-        4 => 'array{0: string,1:int}|null',
-    ] )]
-    private function get_matches(): array|false {
-        $matches = null;
+    private function get_matches(): false|Matcher {
 
         /*
          * aye the magic
@@ -370,11 +306,25 @@ final class Parser {
             $this->offset
         );
 
-        return empty( $matches ) ? false : $matches;
-    }
+        if ( empty( $matches ) ) {
+            return false;
+        }
 
-    private function unicode_to_utf8( string $string ): string {
-        return preg_replace_callback( '/u([0-9a-fA-F]{4})/', static fn ( array $match ): string => (string) mb_convert_encoding( pack( 'H*', $match[1] ), 'UTF-8', 'UCS-2BE' ), $string );
+        /** @var array{
+         *     0: array{0: string,1:int},
+         *     closer: array{0: string,1:int}|null,
+         *     1: array{0: string,1:int}|null,
+         *     namespace: array{0: string,1:int}|null,
+         *     2: array{0: string,1:int}|null,
+         *     name: array{0: string,1:int},
+         *     3: array{0: string,1:int}|null,
+         *     attrs: array{0: string,1:int}|null,
+         *     4: array{0: string,1:int}|null,
+         *     void: array{0: string,1:int}|null,
+         * } $matches
+         */
+
+        return new Matcher( $matches );
     }
 
     /**
@@ -399,7 +349,7 @@ final class Parser {
      * @param string $innerHTML HTML content of block
      *
      * @return array{
-     *     attrs: array<string, mixed>|null,
+     *     attrs: array<array-key, mixed>|null,
      *     blockName: null|string,
      *     innerBlocks: array<array-key, mixed>,
      *     innerContent: array<array-key, string|null>|null,
