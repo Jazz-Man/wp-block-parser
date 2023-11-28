@@ -13,9 +13,4 @@
      * }]]></code>
     </MixedReturnTypeCoercion>
   </file>
-  <file src="wp-block-parser.php">
-    <UnusedClosureParam>
-      <code>$class</code>
-    </UnusedClosureParam>
-  </file>
 </files>
